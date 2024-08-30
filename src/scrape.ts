@@ -10,19 +10,27 @@ import type { default as ExampleAccountFinancialYear } from './examples/get-fina
 import type { default as ExampleAccountStatement } from './examples/get-account-statement-singleaccount.json';
 import type { default as ExampleAccountStatementTransactionData } from './examples/get-account-statement-transaction-data-single.json';
 
-const downloadIfMissing = async (localPath: string, onMiss: () => Promise<NonNullable<unknown>>) => {
-    if (fs.existsSync(localPath) && fs.statSync(localPath).size > 0) {
-        console.error(`${localPath} already exists, skipping`);
-        return fs.readJsonSync(localPath);
-    }
+const main = async ({ authToken, managerSlug, managerId, associationId, verboseLogs }: { authToken: string; managerSlug: string; managerId: string; associationId: string, verboseLogs: boolean }) => {
+    const downloadIfMissing = async (localPath: string, onMiss: () => Promise<NonNullable<unknown>>) => {
+        if (fs.existsSync(localPath) && fs.statSync(localPath).size > 0) {
+            if (verboseLogs) {
+                console.error(`${localPath} already exists, skipping`);
+            } else {
+                process.stdout.write('.');
+            }
+            return fs.readJsonSync(localPath);
+        }
 
-    console.error(`${localPath} does not exist, downloading`);
-    const content = await onMiss();
-    fs.outputJsonSync(localPath, content);
-    return content;
-};
+        if (verboseLogs) {
+            console.error(`${localPath} does not exist, downloading`);
+        } else {
+            process.stdout.write('+');
+        }
+        const content = await onMiss();
+        fs.outputJsonSync(localPath, content);
+        return content;
+    };
 
-const main = async ({ authToken, managerSlug, managerId, associationId }: { authToken: string; managerSlug: string; managerId: string; associationId: string }) => {
     const fetchCondoApi = async (apiPath: string, fetchOptions: RequestInit = {}) => {
         const response = await fetch(`https://${managerSlug}.condoweb.app/api/v1${apiPath}`, {
             ...fetchOptions,
@@ -42,13 +50,16 @@ const main = async ({ authToken, managerSlug, managerId, associationId }: { auth
         return response.json();
     };
 
+    process.stdout.write('Downloading financial years ');
     const financialYears: typeof ExampleFinancialYears = await downloadIfMissing(
         './data/financials/get-financial-years.json',
         () => fetchCondoApi('/financials/get-financial-years')
     );
+    process.stdout.write('\n');
 
     const balanceBudgets: typeof ExampleBalanceBudgets[] = [];
 
+    process.stdout.write(`Downloading ${financialYears.data.length} balance budgets `);
     for (const financialYear of financialYears.data) {
         const financialYearBudget: typeof ExampleBalanceBudgets = await downloadIfMissing(
             `./data/financials/get-balance-budgets/${financialYear.displayYears}.json`,
@@ -58,7 +69,9 @@ const main = async ({ authToken, managerSlug, managerId, associationId }: { auth
 
         balanceBudgets.push(financialYearBudget);
     }
+    process.stdout.write('\n');
 
+    process.stdout.write('Downloading payable and receivable balances ');
     await downloadIfMissing(
         './data/financials/get-payable-balances.json',
         () =>
@@ -70,13 +83,17 @@ const main = async ({ authToken, managerSlug, managerId, associationId }: { auth
         () =>
             fetchCondoApi('/financials/get-receivable-balances')
     ) as typeof ExampleReceivableBalances;
+    process.stdout.write('\n');
 
+    process.stdout.write('Downloading all accounts ');
     const allAccounts: typeof ExampleAllAccounts = await downloadIfMissing('./data/financials/get-all-accounts.json', () =>
         fetchCondoApi('/financials/get-all-accounts')
     );
+    process.stdout.write('\n');
 
     const accountFinancialYears = new Map<number, typeof ExampleAccountFinancialYear>();
 
+    process.stdout.write(`Downloading ${allAccounts.data.length} account financial years `);
     for (const account of allAccounts.data) {
         const accountFinancialYear: typeof ExampleAccountFinancialYear = await downloadIfMissing(
             `./data/financials/get-account-statements/${account.accountNumber}/financial-years.json`,
@@ -86,6 +103,7 @@ const main = async ({ authToken, managerSlug, managerId, associationId }: { auth
 
         accountFinancialYears.set(account.accountNumber, accountFinancialYear);
     }
+    process.stdout.write('\n');
 
     const allAccountIds = allAccounts.data.map((e) => e.accountNumber);
 
@@ -100,6 +118,7 @@ const main = async ({ authToken, managerSlug, managerId, associationId }: { auth
     const accountStatements: typeof ExampleAccountStatement[] = [];
     let accountStatementProgress = 0;
 
+    process.stdout.write(`Downloading ${combinations.length} account statements `);
     for (const { accountId, yearId } of combinations) {
         accountStatementProgress++;
         const targetFile = `./data/financials/get-account-statements/${accountId}/${yearId}.json`;
@@ -113,18 +132,17 @@ const main = async ({ authToken, managerSlug, managerId, associationId }: { auth
                 })
         );
         accountStatements.push(accountStatement);
-        console.log(`Progress: ${accountStatementProgress}/${combinations.length}`);
     }
+    process.stdout.write('\n');
 
     const allTransactionIds = accountStatements.flatMap((e) =>
         e.data.flatMap((e) => e.transactions.map((e) => e.transactionNumber))
     );
     const uniqueTransactionIds = [...new Set(allTransactionIds)];
-    console.log(`${uniqueTransactionIds.length} unique transaction ids found`);
-
     const transactions: typeof ExampleAccountStatementTransactionData[] = [];
     let transactionProgress = 0;
 
+    process.stdout.write(`Downloading ${uniqueTransactionIds.length} transactions `);
     for (const transactionId of uniqueTransactionIds) {
         transactionProgress++;
         const transaction: typeof ExampleAccountStatementTransactionData = await downloadIfMissing(
@@ -147,13 +165,13 @@ const main = async ({ authToken, managerSlug, managerId, associationId }: { auth
                 })
         );
         transactions.push(transaction);
-        console.log(`Progress: ${transactionProgress}/${uniqueTransactionIds.length}`);
     }
+    process.stdout.write('\n');
 };
 
 const argv = minimist(process.argv.slice(2), {
     string: ['token', 'manager-slug', 'manager-id', 'association-id'],
-    boolean: ['help'],
+    boolean: ['help', 'verbose'],
 });
 
 if (argv['help']) {
@@ -186,4 +204,5 @@ main({
     managerId: argv['manager-id'],
     managerSlug: argv['manager-slug'],
     associationId: argv['association-id'],
+    verboseLogs: argv['verbose'],
 });
