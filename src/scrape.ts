@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { fs, sleep } from 'zx';
+import { fs, sleep, minimist, chalk } from 'zx';
 
 import type { default as ExampleFinancialYears } from './examples/get-financial-years.json';
 import type { default as ExampleBalanceBudgets } from './examples/get-balance-budgets-singleyear.json';
@@ -9,21 +9,6 @@ import type { default as ExampleAllAccounts } from './examples/get-all-accounts.
 import type { default as ExampleAccountFinancialYear } from './examples/get-financial-years-singleaccount.json';
 import type { default as ExampleAccountStatement } from './examples/get-account-statement-singleaccount.json';
 import type { default as ExampleAccountStatementTransactionData } from './examples/get-account-statement-transaction-data-single.json';
-
-const AUTH_TOKEN = '________________';
-const MANAGER_SLUG = 'prestantia';
-const MANAGER_ID = 'cf0d81c1-b872-4f0a-0db3-08d8ff5a8751';
-const ASSOCIATION_ID = '________________';
-
-const commonRequestHeaders = {
-    token: AUTH_TOKEN,
-    'association-id': ASSOCIATION_ID,
-    'manager-id': MANAGER_ID,
-    'user-agent':
-        'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36',
-};
-
-const getApiUrl = (path: string) => `https://${MANAGER_SLUG}.condoweb.app/api/v1${path}`;
 
 const downloadIfMissing = async (localPath: string, onMiss: () => Promise<NonNullable<unknown>>) => {
     if (fs.existsSync(localPath) && fs.statSync(localPath).size > 0) {
@@ -37,13 +22,29 @@ const downloadIfMissing = async (localPath: string, onMiss: () => Promise<NonNul
     return content;
 };
 
-const main = async () => {
+const main = async ({ authToken, managerSlug, managerId, associationId }: { authToken: string; managerSlug: string; managerId: string; associationId: string }) => {
+    const fetchCondoApi = async (apiPath: string, fetchOptions: RequestInit = {}) => {
+        const response = await fetch(`https://${managerSlug}.condoweb.app/api/v1${apiPath}`, {
+            ...fetchOptions,
+            headers: {
+                ...fetchOptions.headers ?? {},
+                token: authToken,
+                'association-id': associationId,
+                'manager-id': managerId,
+                'user-agent':
+                    'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36',
+                    },
+        });
+        if (response.status !== 200) {
+            const errorBody = await response.text();
+            throw new Error(`Failed to fetch ${apiPath} (${response.status}): ${errorBody}`);
+        }
+        return response.json();
+    };
+
     const financialYears: typeof ExampleFinancialYears = await downloadIfMissing(
         './data/financials/get-financial-years.json',
-        () =>
-            fetch(getApiUrl('/financials/get-financial-years'), {
-                headers: commonRequestHeaders,
-            }).then((r) => r.json())
+        () => fetchCondoApi('/financials/get-financial-years')
     );
 
     const balanceBudgets: typeof ExampleBalanceBudgets[] = [];
@@ -52,9 +53,7 @@ const main = async () => {
         const financialYearBudget: typeof ExampleBalanceBudgets = await downloadIfMissing(
             `./data/financials/get-balance-budgets/${financialYear.displayYears}.json`,
             () =>
-                fetch(getApiUrl(`/financials/get-balance-budgets/${financialYear.nomAbrege}`), {
-                    headers: commonRequestHeaders,
-                }).then((r) => r.json())
+                fetchCondoApi(`/financials/get-balance-budgets/${financialYear.nomAbrege}`)
         );
 
         balanceBudgets.push(financialYearBudget);
@@ -63,23 +62,17 @@ const main = async () => {
     await downloadIfMissing(
         './data/financials/get-payable-balances.json',
         () =>
-            fetch(getApiUrl('/financials/get-payable-balances'), {
-                headers: commonRequestHeaders,
-            }).then((r) => r.json())
+            fetchCondoApi('/financials/get-payable-balances')
     ) as typeof ExamplePayableBalances;
 
     await downloadIfMissing(
         './data/financials/get-receivable-balances.json',
         () =>
-            fetch(getApiUrl('/financials/get-receivable-balances'), {
-                headers: commonRequestHeaders,
-            }).then((r) => r.json())
+            fetchCondoApi('/financials/get-receivable-balances')
     ) as typeof ExampleReceivableBalances;
 
     const allAccounts: typeof ExampleAllAccounts = await downloadIfMissing('./data/financials/get-all-accounts.json', () =>
-        fetch(getApiUrl('/financials/get-all-accounts'), {
-            headers: commonRequestHeaders,
-        }).then((r) => r.json())
+        fetchCondoApi('/financials/get-all-accounts')
     );
 
     const accountFinancialYears = new Map<number, typeof ExampleAccountFinancialYear>();
@@ -88,9 +81,7 @@ const main = async () => {
         const accountFinancialYear: typeof ExampleAccountFinancialYear = await downloadIfMissing(
             `./data/financials/get-account-statements/${account.accountNumber}/financial-years.json`,
             () =>
-                fetch(getApiUrl(`/financials/get-financial-years/${account.accountNumber}/`), {
-                    headers: commonRequestHeaders,
-                }).then((r) => r.json())
+                fetchCondoApi(`/financials/get-financial-years/${account.accountNumber}/`)
         );
 
         accountFinancialYears.set(account.accountNumber, accountFinancialYear);
@@ -114,18 +105,12 @@ const main = async () => {
         const targetFile = `./data/financials/get-account-statements/${accountId}/${yearId}.json`;
 
         const accountStatement: typeof ExampleAccountStatement = await downloadIfMissing(targetFile, () =>
-            fetch(
-                getApiUrl(
-                    `/financials/get-account-statement/${encodeURIComponent(accountId)}?isNextYear=false&associationId=${ASSOCIATION_ID}&shortenedName=${encodeURIComponent(yearId)}`
-                ),
-                {
-                    headers: commonRequestHeaders,
-                }
-            ).then(async (r) => {
-                // introduce a bit of delay to avoid being mean to the service
-                await sleep(300);
-                return r.json();
-            })
+            fetchCondoApi(`/financials/get-account-statement/${encodeURIComponent(accountId)}?isNextYear=false&associationId=${associationId}&shortenedName=${encodeURIComponent(yearId)}`)
+                .then(async (r) => {
+                    // introduce a bit of delay to avoid being mean to the service
+                    await sleep(300);
+                    return r.json();
+                })
         );
         accountStatements.push(accountStatement);
         console.log(`Progress: ${accountStatementProgress}/${combinations.length}`);
@@ -145,16 +130,15 @@ const main = async () => {
         const transaction: typeof ExampleAccountStatementTransactionData = await downloadIfMissing(
             `./data/financials/get-account-statement-transaction-data/${transactionId}.json`,
             () =>
-                fetch(getApiUrl(`/financials/get-account-statement-transaction-data`), {
+                fetchCondoApi(`/financials/get-account-statement-transaction-data`, {
                     headers: {
-                        ...commonRequestHeaders,
                         'content-type': 'application/x-www-form-urlencoded',
                     },
                     method: 'POST',
                     body: new URLSearchParams({
                         transactionNumber: transactionId.toString(),
                         accountNumber: '0',
-                        associationId: ASSOCIATION_ID,
+                        associationId: associationId,
                     }),
                 }).then(async (r) => {
                     // introduce a bit of delay to avoid being mean to the service
@@ -167,4 +151,39 @@ const main = async () => {
     }
 };
 
-main();
+const argv = minimist(process.argv.slice(2), {
+    string: ['token', 'manager-slug', 'manager-id', 'association-id'],
+    boolean: ['help'],
+});
+
+if (argv['help']) {
+    console.log(`Usage: ${chalk.bold('scrape')} [options]`);
+    process.exit(0);
+}
+
+if (!argv['token']) {
+    console.error(chalk.red('Error: token is required'));
+    process.exit(1);
+}
+
+if (!argv['manager-slug']) {
+    console.error(chalk.red('Error: manager-slug is required'));
+    process.exit(1);
+}
+
+if (!argv['manager-id']) {
+    console.error(chalk.red('Error: manager-id is required'));
+    process.exit(1);
+}
+
+if (!argv['association-id']) {
+    console.error(chalk.red('Error: association-id is required'));
+    process.exit(1);
+}
+
+main({
+    authToken: argv['token'],
+    managerId: argv['manager-id'],
+    managerSlug: argv['manager-slug'],
+    associationId: argv['association-id'],
+});
