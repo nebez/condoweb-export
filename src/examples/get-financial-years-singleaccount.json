@@ -1,0 +1,45 @@
+{
+  "isSuccess": true,
+  "data": [
+    {
+      "nomAbrege": "2024-2025",
+      "associationId": 10218,
+      "displayYears": "2024-2025",
+      "isNext": true,
+      "isCurrent": true,
+      "userHasData": true
+    },
+    {
+      "nomAbrege": "2023-2024",
+      "associationId": 10218,
+      "displayYears": "2023-2024",
+      "isNext": false,
+      "isCurrent": false,
+      "userHasData": true
+    },
+    {
+      "nomAbrege": "2022-2023 SCRUBBED NAME",
+      "associationId": 10252,
+      "displayYears": "2022-2023",
+      "isNext": false,
+      "isCurrent": false,
+      "userHasData": true
+    },
+    {
+      "nomAbrege": "2021-2022 SCRUBBED NAME",
+      "associationId": 10242,
+      "displayYears": "2021-2022",
+      "isNext": false,
+      "isCurrent": false,
+      "userHasData": true
+    },
+    {
+      "nomAbrege": "2020-2021 SCRUBBED NAME",
+      "associationId": 10231,
+      "displayYears": "2020-2021",
+      "isNext": false,
+      "isCurrent": false,
+      "userHasData": false
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "isSuccess": true,
+  "data": [
+    {
+      "accountNumber": 600300,
+      "accountType": 6,
+      "unitNumber": null,
+      "address": "",
+      "name": "Scrubbed name",
+      "balance": 50000.0,
+      "transactions": [
+        {
+          "transactionDate": "2023-04-01T00:00:00",
+          "description": "Scrubbed description",
+          "check": "",
+          "bill": "",
+          "amount": 50000.0,
+          "balance": 50000.0,
+          "isBeginningBalance": true,
+          "hasAttachedFile": false,
+          "attachedFiles": null,
+          "journalId": 0,
+          "transactionNumber": 2996,
+          "note": "",
+          "receiptUrl": null,
+          "refusedData": [],
+          "isRefusedByBoard": false,
+          "total": 0
+        }
+      ],
+      "isSentAttorney": false,
+      "receiptUrl": null,
+      "isRefusedByBoard": false,
+      "refusalReason": null
+    }
+  ]
+}

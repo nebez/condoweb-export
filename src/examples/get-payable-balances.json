@@ -1,0 +1,12 @@
+{
+  "isSuccess": true,
+  "data": [
+    {
+      "accountNumber": 250045,
+      "unitNumber": "",
+      "accountType": 5,
+      "accountName": "SCRUBBED NAME",
+      "balance": 15000.50
+    }
+  ]
+}

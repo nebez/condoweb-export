@@ -1,0 +1,12 @@
+{
+  "name": "condoweb-export",
+  "module": "src/scrape.mts",
+  "type": "module",
+  "description": "Export your condoweb.app financial data",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
