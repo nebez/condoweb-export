@@ -125,11 +125,7 @@ const main = async ({ authToken, managerSlug, managerId, associationId, verboseL
 
         const accountStatement: typeof ExampleAccountStatement = await downloadIfMissing(targetFile, () =>
             fetchCondoApi(`/financials/get-account-statement/${encodeURIComponent(accountId)}?isNextYear=false&associationId=${associationId}&shortenedName=${encodeURIComponent(yearId)}`)
-                .then(async (r) => {
-                    // introduce a bit of delay to avoid being mean to the service
-                    await sleep(300);
-                    return r.json();
-                })
+                .then((res) => sleep(300).then(() => res))
         );
         accountStatements.push(accountStatement);
     }
@@ -158,11 +154,7 @@ const main = async ({ authToken, managerSlug, managerId, associationId, verboseL
                         accountNumber: '0',
                         associationId: associationId,
                     }),
-                }).then(async (r) => {
-                    // introduce a bit of delay to avoid being mean to the service
-                    await sleep(300);
-                    return r.json();
-                })
+                }).then((res) => sleep(300).then(() => res))
         );
         transactions.push(transaction);
     }
