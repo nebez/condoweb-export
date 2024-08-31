@@ -10,7 +10,8 @@
     "typescript": "^5.0.0"
   },
   "scripts": {
-    "scrape": "bun run src/scrape.ts"
+    "scrape": "bun run src/scrape.ts",
+    "tabulate": "bun run src/tabulate.ts"
   },
   "dependencies": {
     "export-to-csv": "^1.3.0"

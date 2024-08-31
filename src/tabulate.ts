@@ -55,8 +55,10 @@ const main = async () => {
     const accountStatements: Array<{ accountNumber: number, accountType: number, accountTypeName: string } & Omit<typeof ExampleAccountStatement['data'][0]['transactions'][0], 'refusedData'>> = [];
     for (const [accountNumber, accountStatement] of accountStatementMap.entries()) {
         for (const transaction of accountStatement.transactions) {
-            const { refusedData, ...transactionWithoutRefusedData } = transaction;
+            const { refusedData, transactionNumber, transactionDate, ...transactionWithoutRefusedData } = transaction;
             accountStatements.push({
+                transactionNumber,
+                transactionDate,
                 accountNumber,
                 accountType: accountStatement.accountType,
                 accountTypeName: AccountTypes[accountStatement.accountType],
@@ -72,7 +74,7 @@ const main = async () => {
         }
         return a.transactionDate.localeCompare(b.transactionDate);
     }));
-    fs.outputFileSync('./csv/account-statements.csv', asString(accountStatementsCsv));
+    fs.outputFileSync('./csv/transaction-statements.csv', asString(accountStatementsCsv));
 
     const accounts: typeof ExampleAllAccounts = fs.readJsonSync('./data/financials/get-all-accounts.json');
     const accountsCsv = generateCsv({ useKeysAsHeaders: true })(accounts.data.map(account => ({
@@ -119,10 +121,8 @@ const main = async () => {
         statementTransactions.push(...statementTransactionData.data);
     }
 
-    const statementTransactionDataCsv = generateCsv({ useKeysAsHeaders: true })(statementTransactions.sort((a, b) => a.transactionDate.localeCompare(b.transactionDate)));
+    const statementTransactionDataCsv = generateCsv({ useKeysAsHeaders: true })(statementTransactions.sort((a, b) => a.transactionNumber - b.transactionNumber));
     fs.outputFileSync(`./csv/transactions.csv`, asString(statementTransactionDataCsv));
-
-    // Get all account data and turn it into a massive CSV.
 };
 
 main();
