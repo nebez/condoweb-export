@@ -110,7 +110,7 @@ const main = async () => {
             accountTypeName: AccountTypes[budget.accountType],
             ...budget,
         })));
-        fs.outputFileSync(`./csv/annual-budgets/${balanceBudgetFile.split('/').pop()!.replace('.json', '.csv')}`, asString(balanceBudgetCsv));
+        fs.outputFileSync(`./csv/annual-budgets/budget-${balanceBudgetFile.split('/').pop()!.replace('.json', '.csv')}`, asString(balanceBudgetCsv));
     }
 
     // Get all the statement transaction data and turn into a csv.
