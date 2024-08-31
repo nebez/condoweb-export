@@ -12,3 +12,14 @@ export const enum AccountType {
     Capital = 6,
     Owners = 7,
 }
+
+export const AccountTypes: Record<AccountType | number, string> = {
+    [AccountType.Assets]: 'Assets',
+    [AccountType.Expenses]: 'Expenses',
+    [AccountType.Receivables]: 'Receivables',
+    [AccountType.Liabilities]: 'Liabilities',
+    [AccountType.Revenues]: 'Revenues',
+    [AccountType.Suppliers]: 'Suppliers',
+    [AccountType.Capital]: 'Capital',
+    [AccountType.Owners]: 'Owners',
+} as const;
